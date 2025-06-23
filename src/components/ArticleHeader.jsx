@@ -21,20 +21,22 @@ export default function ArticleHeader({ article, onEdit, onDelete }) {
           {article.title || ""}
         </h1>
 
-        <div className="flex gap-2 flex-shrink-0">
-          <button
-            onClick={onEdit}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            수정하기
-          </button>
-          <button
-            onClick={onDelete}
-            className="text-sm text-red-500 hover:text-red-700"
-          >
-            삭제하기
-          </button>
-        </div>
+        {article.isOwner && (
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={onEdit}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              수정하기
+            </button>
+            <button
+              onClick={onDelete}
+              className="text-sm text-red-500 hover:text-red-700"
+            >
+              삭제하기
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-3 text-sm text-gray-500">
         <Image
@@ -44,7 +46,7 @@ export default function ArticleHeader({ article, onEdit, onDelete }) {
           height={32}
           className="rounded-full object-cover border"
         />
-        <span>{article.author?.nickname || "익명"}</span>
+        <span>{article.author?.nickname || ""}</span>
         <span>·</span>
         <span>{formattedDate}</span>
         <span>·</span>

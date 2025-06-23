@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getArticles } from "@/lib/api";
+import { articlePandaService } from "@/lib/articleService";
 import ArticleCard from "@/components/ArticleCard";
 
 export default function BoardPage() {
@@ -12,48 +12,62 @@ export default function BoardPage() {
 
   const [articles, setArticles] = useState([]);
   const [bestArticles, setBestArticles] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(searchParams.get("word") || "");
+  const [searchTerm, setSearchTerm] = useState(
+    searchParams.get("keyword") || ""
+  );
   const [orderBy, setOrderBy] = useState("recent");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const DEFAULT_AUTHOR_PROFILE_IMAGE = "/images/board/ic_profile.png";
 
   const loadArticles = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const bestArticlesResponse = await getArticles({
-        take: 3,
+      const bestArticlesResponse = await articlePandaService.getArticles({
+        pageSize: 3,
         orderBy: "recent",
       });
 
-      const bestArticlesWithDefaults = (bestArticlesResponse.data || []).map(
-        (article) => ({
-          ...article,
-
-          author: article.author || { nickname: "익명" },
-
-          likes: article.likes ?? 0,
-          imageUrl: article.imageUrl || "/default-thumbnail.png",
-        })
+      const bestArticlesWithDefaults = (bestArticlesResponse.list || []).map(
+        (article) => {
+          const writer = article.writer; // 실제 API 응답에 따라 'User' 등 다른 속성일 수 있음
+          return {
+            ...article,
+            author: {
+              nickname: writer ? writer.nickname : null,
+              profileUrl:
+                (writer ? writer.image : null) || DEFAULT_AUTHOR_PROFILE_IMAGE,
+            },
+            likes: article.likes ?? 0,
+            imageUrl: article.imageUrl || "/default-thumbnail.png",
+          };
+        }
       );
       setBestArticles(bestArticlesWithDefaults);
 
       const params = { orderBy, take: 10 };
-      const currentSearch = searchParams.get("word");
+      const currentSearch = searchParams.get("keyword");
       if (currentSearch) {
-        params.word = currentSearch;
+        params.keyword = currentSearch;
       }
-      const articlesResponse = await getArticles(params);
+      const articlesResponse = await articlePandaService.getArticles(params);
 
-      const articlesWithDefaults = (articlesResponse.data || []).map(
-        (article) => ({
-          ...article,
-
-          author: article.author || { nickname: "익명" },
-
-          likes: article.likes ?? 0,
-          imageUrl: article.imageUrl || "/default-thumbnail.png",
-        })
+      const articlesWithDefaults = (articlesResponse.list || []).map(
+        (article) => {
+          const writer = article.writer; // 실제 API 응답에 따라 'User' 등 다른 속성일 수 있음
+          return {
+            ...article,
+            author: {
+              nickname: writer ? writer.nickname : null,
+              profileUrl:
+                (writer ? writer.image : null) || DEFAULT_AUTHOR_PROFILE_IMAGE,
+            },
+            likes: article.likes ?? 0,
+            imageUrl: article.imageUrl || "/default-thumbnail.png",
+          };
+        }
       );
       setArticles(articlesWithDefaults);
     } catch (err) {
@@ -79,9 +93,9 @@ export default function BoardPage() {
     e.preventDefault();
     const params = new URLSearchParams(searchParams);
     if (searchTerm.trim()) {
-      params.set("word", searchTerm.trim());
+      params.set("keyword", searchTerm.trim());
     } else {
-      params.delete("word");
+      params.delete("keyword");
     }
 
     router.push(`/board?${params.toString()}`);

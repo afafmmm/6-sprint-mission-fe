@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createArticle } from "@/lib/api";
+import { articlePandaService } from "@/lib/articleService";
 import ArticleForm from "@/components/ArticleForm";
 import clsx from "clsx";
 
@@ -20,7 +20,10 @@ export default function NewArticlePage() {
     setIsLoading(true);
     setError(null);
     try {
-      const newArticle = await createArticle({ title, content });
+      const newArticle = await articlePandaService.createArticle({
+        title,
+        content,
+      });
       router.push(`/board/${newArticle.id}`);
     } catch (err) {
       console.error("게시글 생성 실패:", err);

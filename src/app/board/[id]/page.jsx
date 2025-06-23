@@ -2,16 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { articlePandaService } from "@/lib/articleService";
+import { commentPandaService } from "@/lib/commentService";
+import { useAuth } from "@/providers/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  getArticle,
-  getArticleComments,
-  createArticleComment,
-  deleteArticle,
-  deleteComment,
-  updateComment,
-} from "@/lib/api";
 
 import ArticleHeader from "@/components/ArticleHeader";
 import ArticleContent from "@/components/ArticleContent";
@@ -22,6 +17,7 @@ export default function ArticleDetailPage() {
   const router = useRouter();
   const params = useParams();
   const articleId = params.id;
+  const { user: currentUser } = useAuth();
 
   const [article, setArticle] = useState(null);
   const [comments, setComments] = useState([]);
@@ -35,28 +31,52 @@ export default function ArticleDetailPage() {
   const [editingCommentContent, setEditingCommentContent] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  const DEFAULT_AUTHOR_PROFILE_IMAGE = "/images/board/ic_profile.png";
+
   const loadData = useCallback(async () => {
     if (!articleId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const articleData = await getArticle(articleId);
+      const articleData = await articlePandaService.getArticle(articleId);
+      const articleWriter = articleData.writer;
 
-      setArticle({ ...articleData, isOwner: articleData.isOwner ?? false });
-
-      const commentsResponse = await getArticleComments(articleId, {
-        take: 10,
+      setArticle({
+        ...articleData,
+        isOwner:
+          currentUser && articleWriter
+            ? articleWriter.id === currentUser.id
+            : false,
+        author: {
+          nickname: articleWriter ? articleWriter.nickname : null,
+          profileUrl:
+            (articleWriter ? articleWriter.image : null) ||
+            DEFAULT_AUTHOR_PROFILE_IMAGE,
+        },
       });
-      const commentsWithDefaults = (commentsResponse.data || []).map(
-        (comment) => ({
-          ...comment,
-          isOwner: comment.isOwner ?? false,
-          author: comment.author || {
-            nickname: "익명",
-            profileUrl: "/images/board/ic_profile.png",
-          },
-        })
+
+      const commentsResponse = await commentPandaService.getArticleComments(
+        articleId,
+        {
+          take: 10,
+        }
       );
+      const rawComments = Array.isArray(commentsResponse)
+        ? commentsResponse
+        : [];
+
+      const commentsWithDefaults = rawComments.map((comment) => ({
+        ...comment,
+
+        isOwner: currentUser ? comment.writerId === currentUser.id : false,
+
+        author: {
+          nickname: comment.writer ? comment.writer.nickname : null,
+          profileUrl:
+            (comment.writer ? comment.writer.image : null) ||
+            DEFAULT_AUTHOR_PROFILE_IMAGE,
+        },
+      }));
       setComments(commentsWithDefaults);
     } catch (err) {
       console.error("데이터 로딩 실패:", err);
@@ -66,31 +86,35 @@ export default function ArticleDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [articleId]);
+  }, [articleId, currentUser]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
+  const handleCommentSubmit = async (commentContent) => {
+    if (!commentContent.trim()) return;
     setIsCommentLoading(true);
     try {
-      const createdComment = await createArticleComment(articleId, {
-        content: newComment,
-      });
+      const createdComment = await commentPandaService.createArticleComment(
+        articleId,
+        {
+          content: commentContent,
+        }
+      );
 
+      const newCommentWriter = createdComment.writer;
       const commentWithAuthor = {
         ...createdComment,
         isOwner: true,
-        author: createdComment.author || {
-          nickname: "익명",
-          profileUrl: "/img/board/ic_profile.png",
+        author: {
+          nickname: newCommentWriter ? newCommentWriter.nickname : null,
+          profileUrl:
+            (newCommentWriter ? newCommentWriter.image : null) ||
+            DEFAULT_AUTHOR_PROFILE_IMAGE,
         },
       };
       setComments((prevComments) => [commentWithAuthor, ...prevComments]);
-      setNewComment("");
     } catch (err) {
       console.error("댓글 등록 실패:", err);
       alert("댓글 등록 중 오류가 발생했습니다.");
@@ -106,7 +130,7 @@ export default function ArticleDetailPage() {
   const handleDeleteArticle = async () => {
     if (confirm("정말로 게시글을 삭제하시겠습니까?")) {
       try {
-        await deleteArticle(articleId);
+        await articlePandaService.deleteArticle(articleId);
         alert("게시글이 삭제되었습니다.");
         router.push("/board");
       } catch (err) {
@@ -133,9 +157,12 @@ export default function ArticleDetailPage() {
     }
     setIsSavingEdit(true);
     try {
-      const updatedComment = await updateComment(commentId, {
-        content: editingCommentContent,
-      });
+      const updatedComment = await commentPandaService.updateComment(
+        commentId,
+        {
+          content: editingCommentContent,
+        }
+      );
       setComments((prevComments) =>
         prevComments.map((comment) =>
           comment.id === commentId
@@ -161,7 +188,7 @@ export default function ArticleDetailPage() {
     if (confirm("정말로 댓글을 삭제하시겠습니까?")) {
       setDeletingCommentId(commentId);
       try {
-        await deleteComment(commentId);
+        await commentPandaService.deleteComment(commentId);
         setComments((prevComments) =>
           prevComments.filter((comment) => comment.id !== commentId)
         );
@@ -212,7 +239,7 @@ export default function ArticleDetailPage() {
       <CommentForm
         newComment={newComment}
         setNewComment={setNewComment}
-        handleCommentSubmit={handleCommentSubmit}
+        onSubmit={handleCommentSubmit}
         isCommentLoading={isCommentLoading}
       />
       <CommentList

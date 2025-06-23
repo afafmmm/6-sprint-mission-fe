@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+import { formatRelativeTime } from "@/utils/dateUtils";
+
 export default function CommentItem({
   comment,
   onEditComment,
@@ -14,32 +16,7 @@ export default function CommentItem({
 }) {
   if (!comment) return null;
 
-  const formattedRelativeTime = comment?.createdAt
-    ? (() => {
-        const date = new Date(comment.createdAt);
-        const now = new Date();
-        const diffInSeconds = Math.floor(
-          (now.getTime() - date.getTime()) / 1000
-        );
-        const diffInMinutes = Math.floor(diffInSeconds / 60);
-        const diffInHours = Math.floor(diffInMinutes / 60);
-        const diffInDays = Math.floor(diffInHours / 24);
-
-        if (diffInSeconds < 60) return "방금 전";
-        if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
-        if (diffInHours < 24) return `${diffInHours}시간 전`;
-        if (diffInDays === 1) return "어제";
-        if (diffInDays < 7) return `${diffInDays}일 전`;
-        return date
-          .toLocaleDateString("ko-KR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          })
-          .replace(/\. /g, ".")
-          .slice(0, -1);
-      })()
-    : "";
+  const formattedRelativeTime = formatRelativeTime(comment?.createdAt);
 
   return (
     <div className="border-t pt-4">
@@ -62,7 +39,7 @@ export default function CommentItem({
               </span>
             </div>
 
-            {!isEditing && (
+            {!isEditing && comment.isOwner && (
               <div className="flex gap-2">
                 <button
                   onClick={() => onEditComment(comment.id, comment.content)}

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getArticle, updateArticle } from "@/lib/api";
+import { articlePandaService } from "@/lib/articleService";
+import { useAuth } from "@/providers/AuthProvider";
 import ArticleForm from "@/components/ArticleForm";
 import clsx from "clsx";
 
@@ -10,6 +11,7 @@ export default function EditArticlePage() {
   const router = useRouter();
   const params = useParams();
   const articleId = params.id;
+  const { user: currentUser } = useAuth();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -22,7 +24,18 @@ export default function EditArticlePage() {
     setIsFetching(true);
     setError(null);
     try {
-      const article = await getArticle(articleId);
+      const article = await articlePandaService.getArticle(articleId);
+      const articleWriter = article.writer;
+
+      if (
+        !currentUser ||
+        !articleWriter ||
+        articleWriter.id !== currentUser.id
+      ) {
+        setError("이 게시글을 수정할 권한이 없습니다.");
+        setIsFetching(false);
+        return;
+      }
       setTitle(article.title || "");
       setContent(article.content || "");
     } catch (err) {
@@ -31,11 +44,13 @@ export default function EditArticlePage() {
     } finally {
       setIsFetching(false);
     }
-  }, [articleId]);
+  }, [articleId, currentUser, router]);
 
   useEffect(() => {
-    loadArticle();
-  }, [loadArticle]);
+    if (currentUser !== undefined) {
+      loadArticle();
+    }
+  }, [loadArticle, currentUser]);
 
   const isSubmitDisabled =
     !title.trim() || !content.trim() || isLoading || isFetching;
@@ -44,7 +59,7 @@ export default function EditArticlePage() {
     setIsLoading(true);
     setError(null);
     try {
-      await updateArticle(articleId, { title, content });
+      await articlePandaService.updateArticle(articleId, { title, content });
       router.push(`/board/${articleId}`);
     } catch (err) {
       console.error("게시글 수정 실패:", err);
@@ -61,7 +76,10 @@ export default function EditArticlePage() {
     );
   }
 
-  if (error && !title && !content) {
+  if (
+    error &&
+    (title === "" || content === "" || (!isFetching && !title && !content))
+  ) {
     return (
       <div className="max-w-[1200px] mx-auto pt-[24px] pb-10 text-red-500">
         {error}
