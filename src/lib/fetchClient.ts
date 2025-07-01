@@ -132,9 +132,9 @@ export const cookiePandaFetch = async <T = any>(
   const url = `${API_BASE_URL}${endpoint}`;
 
   const performFetchWithToken = async (token: string): Promise<Response> => {
-    const requestHeaders: HeadersInit = {
+    const requestHeaders: Record<string, string> = {
       "Content-Type": "application/json",
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
       Authorization: `Bearer ${token}`,
     };
     let processedBody = options.body;
