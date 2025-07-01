@@ -1,10 +1,8 @@
-// src/hooks/useProductForm.js
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { productPandaService as productService } from "@/lib/productService";
 import { imagePandaService } from "@/lib/imageService";
 
-// --- 상수 정의 (변경 없음) ---
 const MAX_TAG_COUNT = 5;
 const MAX_TAG_LENGTH = 20;
 const MAX_NAME_LENGTH = 100;
@@ -13,7 +11,7 @@ const IMAGE_MAX_SIZE_MB = 5;
 
 export function useProductForm(itemId = null) {
   const router = useRouter();
-  // --- 상태 변수 정의 (변경 없음) ---
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -27,7 +25,6 @@ export function useProductForm(itemId = null) {
 
   const isEditMode = !!itemId;
 
-  // --- 수정 모드 시 데이터 로딩 useEffect (변경 없음) ---
   useEffect(() => {
     if (!isEditMode) return;
     const fetchProductData = async () => {
@@ -65,7 +62,6 @@ export function useProductForm(itemId = null) {
     (file, previewUrl) => {
       setImageFile(file);
       setImagePreview(previewUrl);
-
       if (submitError?.includes("이미지")) setSubmitError(null);
     },
     [submitError]
@@ -73,8 +69,10 @@ export function useProductForm(itemId = null) {
 
   const handleImageError = useCallback((errorMsg) => {
     setSubmitError(errorMsg);
-    setImageFile(null);
-  }, []); // 의존성 없음
+    if (errorMsg) {
+      setImageFile(null);
+    }
+  }, []);
 
   useEffect(() => {
     const currentPreview = imagePreview;
@@ -120,9 +118,8 @@ export function useProductForm(itemId = null) {
       if (isSubmitting || isLoading) return;
 
       setSubmitError(null);
-
       setIsSubmitting(true);
-      let finalImageUrl = existingImageUrl;
+      let finalImageUrls = existingImageUrl ? [existingImageUrl] : [];
 
       try {
         if (imageFile) {
@@ -132,23 +129,23 @@ export function useProductForm(itemId = null) {
             imageFormData
           );
 
-          if (!uploadResponse?.imageUrl) {
-            // 'url' 대신 'imageUrl'을 확인합니다.
+          const received = uploadResponse?.imageUrl;
+
+          if (!received || (Array.isArray(received) && received.length === 0)) {
             throw new Error("이미지 업로드 후 URL을 받지 못했습니다.");
           }
 
-          finalImageUrl = uploadResponse.imageUrl; // 'url' 대신 'imageUrl'을 사용합니다.
+          finalImageUrls = Array.isArray(received) ? received : [received];
         } else if (!imagePreview && existingImageUrl && isEditMode) {
-          finalImageUrl = "";
+          finalImageUrls = [];
         }
 
         const productData = {
           name: name.trim(),
           description: description.trim(),
-
           price: parseInt(price, 10) || 0,
           tags: tags,
-          images: finalImageUrl ? [finalImageUrl] : [],
+          images: finalImageUrls,
         };
 
         if (isEditMode) {
@@ -179,11 +176,9 @@ export function useProductForm(itemId = null) {
         setIsSubmitting(false);
       }
     },
-
     [
       isSubmitting,
       isLoading,
-
       existingImageUrl,
       imageFile,
       imagePreview,
@@ -197,7 +192,6 @@ export function useProductForm(itemId = null) {
     ]
   );
 
-  // --- 훅 반환 값 (변경 없음) ---
   return {
     name,
     description,

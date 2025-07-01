@@ -1,4 +1,3 @@
-// lib/productService.js
 import { defaultPandaFetch, cookiePandaFetch } from "@/lib/fetchClient";
 
 export const productPandaService = {

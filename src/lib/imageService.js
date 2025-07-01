@@ -1,4 +1,3 @@
-// lib/imageService.js
 import { cookiePandaFetch } from "@/lib/fetchClient";
 
 export const imagePandaService = {

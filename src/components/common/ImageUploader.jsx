@@ -14,8 +14,8 @@ export default function ImageUploader({
   isSubmitting,
   isRequired,
   error,
-  existingImageUrl = "", // 수정 시 기존 이미지 URL
-  allowRemove = false, // 이미지 제거 버튼 표시 여부
+  existingImageUrl = "",
+  allowRemove = false,
 }) {
   const fileInputRef = useRef(null);
 
@@ -30,13 +30,12 @@ export default function ImageUploader({
       }
       const newPreviewUrl = URL.createObjectURL(file);
       onImageChange(file, newPreviewUrl);
-      onImageError(null); // Clear previous error
+      onImageError(null);
     } else {
-      // 파일 선택 취소 시 (기존 이미지가 있다면 유지, 없다면 null)
       onImageChange(null, existingImageUrl || null);
-      if (error) onImageError(null); // Clear error if related
+      if (error) onImageError(null);
     }
-    // Reset file input to allow selecting the same file again
+
     if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
@@ -44,12 +43,11 @@ export default function ImageUploader({
     if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
-    onImageChange(null, null); // 파일과 미리보기 모두 제거
-    onImageError(null); // 에러 제거
+    onImageChange(null, null);
+    onImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
-  // Clean up blob URL on unmount or when previewUrl changes
   useEffect(() => {
     const currentPreview = previewUrl;
     return () => {
@@ -101,7 +99,7 @@ export default function ImageUploader({
             accept="image/*"
             onChange={handleFileChange}
             disabled={isSubmitting}
-            required={isRequired && !previewUrl} // 필수인데 미리보기가 없으면 required
+            required={isRequired && !previewUrl}
             className="hidden"
           />
         </label>
@@ -117,7 +115,7 @@ export default function ImageUploader({
                 onError={(e) => {
                   console.warn(`이미지 미리보기 로드 실패: ${previewUrl}`);
                   onImageError("미리보기 로드에 실패했습니다.");
-                  e.target.style.display = "none"; // Hide broken image
+                  e.target.style.display = "none";
                 }}
               />
               {allowRemove && !isSubmitting && (
@@ -141,7 +139,7 @@ export default function ImageUploader({
           {error}
         </div>
       )}
-      {/* Hidden input for form validation if needed */}
+
       <input
         type="text"
         value={previewUrl ? "filled" : ""}

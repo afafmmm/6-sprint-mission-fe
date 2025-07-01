@@ -139,6 +139,12 @@ export const cookiePandaFetch = async <T = any>(
     };
     let processedBody = options.body;
 
+    if (processedBody instanceof FormData) {
+      delete (requestHeaders as Record<string, string>)["Content-Type"];
+    } else {
+      requestHeaders["Content-Type"] = "application/json";
+    }
+
     if (
       processedBody &&
       typeof processedBody === "object" &&
@@ -178,7 +184,6 @@ export const cookiePandaFetch = async <T = any>(
       const newAccessToken = await authUtils.refreshAccessToken();
       response = await performFetchWithToken(newAccessToken);
     } catch (refreshError: any) {
-      // <--- 여기에 중괄호가 빠져 있었습니다!
       throw new Error(`401 후 토큰 갱신 실패: ${refreshError.message}`);
     }
   }
