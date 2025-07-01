@@ -68,7 +68,7 @@ export const defaultPandaFetch = async <T = any>(
   const url = `${API_BASE_URL}${endpoint}`;
   const requestHeaders: HeadersInit = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
   let processedBody = options.body;
 
@@ -86,7 +86,7 @@ export const defaultPandaFetch = async <T = any>(
       throw new Error("요청 데이터 JSON 변환 실패");
     }
   } else if (processedBody instanceof FormData) {
-    delete (requestHeaders as Record<string, string>)["Content-Type"];
+    delete requestHeaders["Content-Type"];
   }
 
   const config: RequestInit = {
